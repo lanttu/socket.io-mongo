@@ -5,8 +5,8 @@
     "engines" : {
         "node": "~0.6"
     },
-    "keywords": [ "mongodb", "socket.io", "pubsub"],
-    "author": "Koen Punt <koen@koen.pt>",
+    "keywords": [ "mongodb", "socket.io", "pubsub", "mubsub", "pub", "sub", "mongo"],
+    "author": "Koen Punt <me@koen.pt>",
     "repository": "git://github.com/koenpunt/socket.io-mongo.git",
     "dependencies": {
         "mubsub": "~0.0.2",
