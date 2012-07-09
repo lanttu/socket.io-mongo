@@ -9,7 +9,7 @@
     "author": "Koen Punt <me@koen.pt>",
     "repository": "git://github.com/koenpunt/socket.io-mongo.git",
     "dependencies": {
-        "mubsub": "~0.0.2",
+        "mubsub": "https://github.com/koenpunt/mubsub/tarball/master",
         "socket.io": "~0.9"
     },
     "devDependencies": {
