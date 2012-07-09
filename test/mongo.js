@@ -89,22 +89,22 @@ describe('Mongo', function(){
     
 
     it('should set, without errors', function(next){
-      client.set('a', 'b', function(err) {
+      client.set('foo', 'bar', function(err) {
         should.not.exist(err);
         next();
       });
     });
 
     it('should get correct values, without errors', function(next){
-      client.get('a', function(err, val) {
+      client.get('foo', function(err, val) {
         should.not.exist(err);
-        val.should.equal('b');
+        val.should.equal('bar');
         next();
       });
     });
 
     it('should has correct values, without errors', function(next){
-      client.has('a', function(err, has) {
+      client.has('foo', function(err, has) {
         should.not.exist(err);
         has.should.equal(true);
         next();
@@ -112,7 +112,7 @@ describe('Mongo', function(){
     });
 
     it('should has `false`, without errors', function(next){
-      client.has('b', function(err, has) {
+      client.has('baz', function(err, has) {
         should.not.exist(err);
         has.should.equal(false);
         next();
@@ -120,14 +120,14 @@ describe('Mongo', function(){
     });
 
     it('should del, without errors', function(next){
-      client.del('a', function(err) {
+      client.del('foo', function(err) {
         should.not.exist(err);
         next();
       });
     });
 
     it('should has `false` after del, without errors', function(next){
-      client.has('a', function(err, has) {
+      client.has('foo', function(err, has) {
         should.not.exist(err);
         has.should.equal(false);
         next();
@@ -135,21 +135,21 @@ describe('Mongo', function(){
     });
 
     it('should set object, without errors', function(next){
-      client.set('c', {a: 1}, function(err) {
+      client.set('baz', {a: 1}, function(err) {
         should.not.exist(err);
         next();
       });
     });
 
     it('should modify object, without errors', function(next){
-      client.set('c', {a: 3}, function(err) {
+      client.set('baz', {a: 3}, function(err) {
         should.not.exist(err);
         next();
       });
     });
 
     it('should get modified object with correct values, without errors', function(next){
-      client.get('c', function(err, val) {
+      client.get('baz', function(err, val) {
         should.not.exist(err);
         val.should.eql( {a: 3} );
         next();
@@ -172,7 +172,7 @@ describe('Mongo', function(){
   
     chain.add(function() {
       it('should set client1, without errors', function(){
-        client1.set('a', 'b', function(err) {
+        client1.set('foo', 'bar', function(err) {
           should.not.exist(err);
           chain.next();
         });
@@ -180,7 +180,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should set client2, without errors', function(){
-        client2.set('c', 'd', function(err) {
+        client2.set('baz', 'qux', function(err) {
           should.not.exist(err);
           chain.next();
         });
@@ -188,7 +188,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should has correct value in client1, without errors', function(){
-        client1.has('a', function(err, has) {
+        client1.has('foo', function(err, has) {
           should.not.exist(err);
           has.should.equal(true);
           chain.next();
@@ -197,7 +197,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should should has correct value in client2, without errors', function(){
-        client2.has('c', function(err, has) {
+        client2.has('baz', function(err, has) {
           should.not.exist(err);
           has.should.equal(true);
           chain.next();
@@ -215,7 +215,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should has correct value in client1 after destroy, without errors', function(){
-        client1.has('a', function(err, has) {
+        client1.has('foo', function(err, has) {
           should.not.exist(err);
           has.should.equal(false);
           chain.next();
@@ -224,7 +224,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should has correct value in client2 after destroy', function(){
-        client2.has('c', function(err, has) {
+        client2.has('baz', function(err, has) {
           should.not.exist(err);
           has.should.equal(false);
           chain.next();
@@ -246,7 +246,7 @@ describe('Mongo', function(){
     
     chain.add(function() {
       it('should set client1, without errors', function(){
-        client1.set('a', 'b', function(err) {
+        client1.set('foo', 'bar', function(err) {
           should.not.exist(err); // '');
           chain.next();
         });
@@ -254,7 +254,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should set client2, without errors', function(){
-        client2.set('c', 'd', function(err) {
+        client2.set('baz', 'qux', function(err) {
           should.not.exist(err);
           chain.next();
         });
@@ -262,7 +262,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should has correct value in client1, without errors', function(){
-        client1.has('a', function(err, has) {
+        client1.has('foo', function(err, has) {
           should.not.exist(err);
           has.should.equal(true);
           chain.next();
@@ -271,7 +271,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('should has correct value in client2, without errors', function(){
-        client2.has('c', function(err, has) {
+        client2.has('baz', function(err, has) {
           should.not.exist(err);
           has.should.equal(true);
           chain.next();
@@ -292,7 +292,7 @@ describe('Mongo', function(){
     });
     chain.add(function() {
       it('shouldn\'t has a value in client1 after destroy, without errors', function(){
-        client1.has('a', function(err, has) {
+        client1.has('foo', function(err, has) {
           should.not.exist(err);
           has.should.equal(false);
           chain.next();
