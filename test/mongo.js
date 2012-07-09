@@ -1,358 +1,361 @@
-var chainer = require('chainer');
+var chainer = require('chainer'),
+    should = require('should'),
+    Mongo = require("../lib/mongo");
 
-function create() {
-    var store;
-
-    store = new Mongo({
-        url: 'mongodb://localhost:27017/socketio'
-    });
-
-    store.on('error', console.error);
-
-    return store;
+function getInstance() {
+  var store;
+  store = new Mongo({
+    url: process.env.MONGODB_URI || 'mongodb://localhost:27017/socketio_mongo'
+  });
+  store.on('error', console.error);
+  return store;
 }
 
-// since we are sharing the same connection between all instances,
-// connection will be closed only if the last instance was destroyed,
-// prevent this
-create();
+// Always keep one instance
+getInstance();
 
-test('test publishing doesnt get caught by the own store subscriber', function() {
-    var a = create(),
-        b = create();
-
-    stop();
-    expect(1);
-
-    a.subscribe('myevent', function(arg) {
-        equal(arg, 'bb', 'got event from correct server');
-        a.destroy();
-        b.destroy();
-        start();
+describe('Mongo', function(){
+  describe('tests subscribing and unsubscribing', function(){
+    var a, b, c;
+    
+    beforeEach(function(){
+      a = getInstance();
+      b = getInstance();
+      c = getInstance();
     });
 
-    a.publish('myevent', 'aa');
-    b.publish('myevent', 'bb');
-});
+    afterEach(function(){
+      a.destroy();
+      b.destroy();
+      c.destroy();
+    });
 
-test('unsubscribe', function() {
-    var a = create(),
-        b = create();
+    it('should only receive events not send by self', function(next){
+      a.subscribe('myevent', function(arg) {
+        arg.should.equal('foo');
+        next();
+      });
+      
+      a.publish('myevent', 'bar');
+      b.publish('myevent', 'foo');
+      
+    });
 
-    stop();
-    expect(1);
-
-    a.subscribe('myevent', function(arg) {
-        equal(arg, 'aa', 'got subscribed event before unsubscribe');
+    it('should receive subscribed event before unsubscribe', function(next){
+      a.subscribe('myevent', function(arg) {
+        arg.should.equal( 'foobar' );
         a.unsubscribe('myevent', function() {
-            b.publish('myevent');
-            start();
+          b.publish('myevent');
+          next();
         });
+      });
+      b.publish('myevent', 'foobar');
     });
-
-    b.publish('myevent', 'aa');
-});
-
-test('test publishing to multiple subscribers', function() {
-    var a = create(),
-        b = create(),
-        c = create(),
-        messages = 0;
-
-    stop();
-    expect(19);
-
-    function subscription(arg1, arg2, arg3) {
-        equal(arg1, 1, 'arg1 is correct');
-        equal(arg2, 2, 'arg2 is correct');
-        equal(arg3, 3, 'arg3 is correct');
+    
+    it('should publish to multiple subscribers', function(next) {
+      var messages = 0;
+      function subscription(arg1, arg2, arg3) {
+        arg1.should.equal( 'foo' );
+        arg2.should.equal( 'bar' );
+        arg3.should.equal( 'baz' );
         messages++;
+
         if (messages == 6) {
-            equal(messages, 6, 'amount of received messages is correct');
-            a.destroy();
-            b.destroy();
-            c.destroy();
-            start();
+          messages.should.equal( 6 );
+          next();
         }
-    }
+      }
+      a.subscribe('myevent', subscription);
+      b.subscribe('myevent', subscription);
+      c.subscribe('myevent', subscription);
 
+      a.publish('myevent', 'foo', 'bar', 'baz');
+      a.publish('myevent', 'foo', 'bar', 'baz');
+      a.publish('myevent', 'foo', 'bar', 'baz');
+    });
+  });
+  
+  describe('test storing and retrieving data for a client', function() {
+    var store, clientId, client;
+    before(function(){
+      store = getInstance();
+      clientId = 'client-' + Date.now();
+      client = store.client(clientId);
+    });
+    
+    it('should have client id', function(){
+      client.id.should.equal(clientId);
+    })
+    
 
-    a.subscribe('myevent', subscription);
-    b.subscribe('myevent', subscription);
-    c.subscribe('myevent', subscription);
-
-    a.publish('myevent', 1, 2, 3);
-    a.publish('myevent', 1, 2, 3);
-    a.publish('myevent', 1, 2, 3);
-});
-
-test('test storing data for a client', function() {
-    var chain = chainer(),
-        store = create(),
-        rand = 'test-' + Date.now(),
-        client = store.client(rand);
-
-    stop();
-    expect(15);
-
-    equal(client.id, rand, 'client id was set');
-
-    chain.add(function() {
-        client.set('a', 'b', function(err) {
-            equal(err, null, 'set without errors');
-            chain.next();
-        });
+    it('should set, without errors', function(next){
+      client.set('a', 'b', function(err) {
+        should.not.exist(err);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.get('a', function(err, val) {
-            equal(err, null, 'get without errors');
-            equal(val, 'b', 'get correct value');
-            chain.next();
-        });
+    it('should get correct values, without errors', function(next){
+      client.get('a', function(err, val) {
+        should.not.exist(err);
+        val.should.equal('b');
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.has('a', function(err, has) {
-            equal(err, null, 'has without errors');
-            equal(has, true, 'has correct value');
-            chain.next();
-        });
+    it('should has correct values, without errors', function(next){
+      client.has('a', function(err, has) {
+        should.not.exist(err);
+        has.should.equal(true);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.has('b', function(err, has) {
-            equal(err, null, 'has negative without errors');
-            equal(has, false, 'has negative correct value');
-            chain.next();
-        });
+    it('should has `false`, without errors', function(next){
+      client.has('b', function(err, has) {
+        should.not.exist(err);
+        has.should.equal(false);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.del('a', function(err) {
-            equal(err, null, 'del without errors');
-            chain.next();
-        });
+    it('should del, without errors', function(next){
+      client.del('a', function(err) {
+        should.not.exist(err);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.has('a', function(err, has) {
-            equal(err, null, 'has after del without errors');
-            equal(has, false, 'has after del correct value');
-            chain.next();
-        });
+    it('should has `false` after del, without errors', function(next){
+      client.has('a', function(err, has) {
+        should.not.exist(err);
+        has.should.equal(false);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.set('c', {a: 1}, function(err) {
-            equal(err, null, 'set object without errors');
-            chain.next();
-        });
+    it('should set object, without errors', function(next){
+      client.set('c', {a: 1}, function(err) {
+        should.not.exist(err);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.set('c', {a: 3}, function(err) {
-            equal(err, null, 'modify object without errors');
-            chain.next();
-        });
+    it('should modify object, without errors', function(next){
+      client.set('c', {a: 3}, function(err) {
+        should.not.exist(err);
+        next();
+      });
     });
 
-    chain.add(function() {
-        client.get('c', function(err, val) {
-            equal(err, null, 'get modified obj without errors');
-            deepEqual(val, {a: 3}, 'get modified obj');
-            chain.next();
-        });
+    it('should get modified object with correct values, without errors', function(next){
+      client.get('c', function(err, val) {
+        should.not.exist(err);
+        val.should.eql( {a: 3} );
+        next();
+      });
     });
 
-    chain.add(function() {
-        store.destroy();
-        start();
+    after(function(){
+      store.destroy();
     });
+    
+  });
 
-    chain.start();
-});
-
-test('test cleaning up clients data', function() {
-    var chain = chainer(),
-        store = create(),
-        client1 = store.client(Date.now()),
-        client2 = store.client(Date.now() + 1);
-
-    stop();
-    expect(10);
-
+  describe('test cleaning up clients data', function() {
+    var chain, store, client1, client2;
+    
+    chain = chainer();
+    store = getInstance();
+    client1 = store.client('client1-' + Date.now());
+    client2 = store.client('client2-' + Date.now());
+  
     chain.add(function() {
+      it('should set client1, without errors', function(){
         client1.set('a', 'b', function(err) {
-            equal(err, null, 'client1 set without errors');
-            chain.next();
+          should.not.exist(err);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should set client2, without errors', function(){
         client2.set('c', 'd', function(err) {
-            equal(err, null, 'client2 set without errors');
-            chain.next();
+          should.not.exist(err);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should has correct value in client1, without errors', function(){
         client1.has('a', function(err, has) {
-            equal(err, null, 'client1 has without errors');
-            equal(has, true, 'client1 has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(true);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should should has correct value in client2, without errors', function(){
         client2.has('c', function(err, has) {
-            equal(err, null, 'client2 has without errors');
-            equal(has, true, 'client2 has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(true);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should destroy and initiate new store', function(){
         store.destroy();
-        store = create();
+        store = getInstance();
         client1 = store.client(Date.now());
         client2 = store.client(Date.now() + 1);
         chain.next();
+      });
     });
-
     chain.add(function() {
+      it('should has correct value in client1 after destroy, without errors', function(){
         client1.has('a', function(err, has) {
-            equal(err, null, 'client1 after destroy has without errors');
-            equal(has, false, 'client1 after destroy has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(false);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should has correct value in client2 after destroy', function(){
         client2.has('c', function(err, has) {
-            equal(err, null, 'client2after destroy has without errors');
-            equal(has, false, 'client2 after destroy has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(false);
+          chain.next();
         });
+      });
     });
-
-    chain.add(start);
-
     chain.start();
-});
+  });
 
-test('test cleaning up a particular client', function() {
-    var chain = chainer(),
-        store = create(),
-        id1 = Date.now(),
-        id2 = Date.now() + 1,
-        client1 = store.client(id1),
-        client2 = store.client(id2);
-
-    stop();
-    expect(12);
-
+  describe('test cleaning up a particular client', function() {
+    var chain, store, clientId1, clientId2, client1, client2;
+    
+    chain = chainer();
+    store = getInstance()
+    clientId1 = 'client1-' + Date.now();
+    clientId2 = 'client2-' + Date.now();
+    client1 = store.client(clientId1);
+    client2 = store.client(clientId2);
+    
     chain.add(function() {
+      it('should set client1, without errors', function(){
         client1.set('a', 'b', function(err) {
-            equal(err, null, 'client1 set without errors');
-            chain.next();
+          should.not.exist(err); // '');
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should set client2, without errors', function(){
         client2.set('c', 'd', function(err) {
-            equal(err, null, 'client2 set without errors');
-            chain.next();
+          should.not.exist(err);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should has correct value in client1, without errors', function(){
         client1.has('a', function(err, has) {
-            equal(err, null, 'client1 has without errors');
-            equal(has, true, 'client1 has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(true);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
+      it('should has correct value in client2, without errors', function(){
         client2.has('c', function(err, has) {
-            equal(err, null, 'client2 has without errors');
-            equal(has, true, 'client2 has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(true);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
-        equal(id1 in store.clients, true, 'client1 is in clients');
-        equal(id2 in store.clients, true, 'client2 is in clients');
-        store.destroyClient(id1);
-        equal(id1 in store.clients, false, 'client1 is in clients');
-        equal(id2 in store.clients, true, 'client2 is in clients');
+      it('should have client1 and client2 in clients', function(){
+        store.clients.should.have.property(clientId1);
+        store.clients.should.have.property(clientId2);
+
+        store.destroyClient(clientId1);
+
+        store.clients.should.not.have.property(clientId1);
+        store.clients.should.have.property(clientId2);
         chain.next();
+      });
     });
-
     chain.add(function() {
+      it('shouldn\'t has a value in client1 after destroy, without errors', function(){
         client1.has('a', function(err, has) {
-            equal(err, null, 'client1 after destroy has without errors');
-            equal(has, false, 'client1 after destroy has correct value');
-            chain.next();
+          should.not.exist(err);
+          has.should.equal(false);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
-        store.destroy();
-        start();
+      store.destroy();
     });
-
     chain.start();
-});
+  });
 
-test('test destroy expiration', function() {
-    var chain = chainer(),
-        store = create(),
-        id = Date.now();
-        client = store.client(id);
-
-    stop();
-    expect(5);
-
+  describe('test destroy expiration', function() {
+    var store, clientId, client;
+    chain = chainer();
+    store = getInstance()
+    clientId = 'client-' + Date.now();
+    client = store.client(clientId);
+    
     chain.add(function() {
-        client.set('a', 'b', function(err) {
-            equal(err, null, 'set without errors');
-            chain.next();
+      it('should set, without errors', function(){
+        client.set('foo', 'bar', function(err) {
+          should.not.exist(err);
+          chain.next();
         });
+      });
     });
-
     chain.add(function() {
-        store.destroyClient(id, 1);
-        setTimeout(function() {
+      it('should destroy client with 1 second expiration', function(){
+        store.destroyClient(clientId, 2);
+        setTimeout(function(){
+          chain.next()
+        }, 1500);
+      });
+    });
+    chain.add(function() {
+      it('should get correct value, without errors', function(){
+        client.get('foo', function(err, val) {
+          should.not.exist(err);
+          console.log(val);
+          //val.should.equal('bar');
+          setTimeout(function(){
+            console.log(client.get('foo'));
             chain.next();
-        }, 500);
-    });
-
-    chain.add(function() {
-        client.get('a', function(err, val) {
-            equal(err, null, 'get without errors');
-            equal(val, 'b', 'get correct value');
-            setTimeout(function() {
-                chain.next();
-            }, 2000);
+          }, 12000);
         });
+      });
     });
-
     chain.add(function() {
-        client.get('a', function(err, val) {
-            equal(err, null, 'get without errors after expiration');
-            equal(val, null, 'get correct value after expiration');
-            chain.next();
+      it('should get correct value after expiration, without errors', function(){
+        client.get('foo', function(err, val) {
+          should.not.exist(err);
+          should.not.exist(val);
+          chain.next();
         });
+      });
     });
 
     chain.add(function() {
-        store.destroy();
-        start();
+      store.destroy();
     });
-
+    
     chain.start();
+  });
+  
 });
-
