@@ -1,22 +1,22 @@
 {
     "name" : "socket.io-mongo",
     "description": "Socket.io store implementation backed by mongodb.",
-    "version" : "0.0.8",
+    "version" : "0.1.0",
     "engines" : {
-        "node": "0.6.x"
+        "node": "~0.6"
     },
-    "keywords": [ "mongodb", "socket.io", "pubsub"],
-    "author": "Oleg Slobodskoi <oleg008@gmail.com>",
-    "repository": "git://github.com/kof/socket.io-mongo.git",
+    "keywords": [ "mongodb", "socket.io", "pubsub", "mubsub", "pub", "sub", "mongo"],
+    "author": "Koen Punt <me@koen.pt>",
+    "repository": "git://github.com/koenpunt/socket.io-mongo.git",
     "dependencies": {
         "mubsub": "0.1.3",
         "socket.io": "0.9.x",
         "underscore": "1.3.3"
     },
     "devDependencies": {
-        "qunit": "0.5.3",
-        "chainer": "0.0.5",
-        "argsparser": "0.0.6"
+        "mocha" : "https://github.com/koenpunt/mocha/tarball/master",
+        "should": "~0.6",
+        "chainer": "0.0.5"
     },
     "licenses": [
         {

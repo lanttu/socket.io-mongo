@@ -1,4 +1,8 @@
 test:
-	node_modules/.bin/qunit -c ./lib/mongo -t ./test/mongo
+	node_modules/.bin/mocha --require should ./test/mongo
+	
+test_dep:
+	node_modules/.bin/mocha --require should ./test/mubsub
 
-.PHONY: test
+
+.PHONY: test test_dep
