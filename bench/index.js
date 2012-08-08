@@ -5,17 +5,17 @@
 
 var Mongo = require('../'),
     Redis = require('socket.io').RedisStore,
-    opts = require('argsparser').parse();
+    opts  = require('optimist').argv;
 
-if (!opts['--db'] || !opts['--test']) {
+if (!opts.db || !opts.test) {
     console.error('Usage: node bench --db redis|mongo --test pubsub|storage');
     process.exit(1);
 }
 
-var db = opts['--db'],
-    test = opts['--test'],
-    amount = opts['--amount'] || 15000,
-    data = opts['--data'] || 'mytestdata';
+var db      = opts.db;
+var test    = opts.test;
+var amount  = opts.amount || 15000;
+var data    = opts.data || 'mytestdata';
 
 console.error('Testing', test, ', using', db, ', amount:', amount, ', data:', data);
 console.time(test);
@@ -29,7 +29,7 @@ function create() {
 
     if (db == 'mongo') {
         store = new Mongo({
-            url: 'mongodb://localhost:27017/socketio',
+            url: process.env.MONGODB_URI || 'mongodb://localhost:27017/socketio',
             size: 1000000
         });
 
